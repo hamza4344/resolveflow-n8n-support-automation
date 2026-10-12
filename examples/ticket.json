@@ -1,0 +1,5 @@
+{
+  "event_id": "demo-vpn-001",
+  "subject": "VPN connection fails",
+  "message": "My VPN connection fails. The client shows error 809."
+}

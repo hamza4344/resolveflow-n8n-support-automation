@@ -1,0 +1,5 @@
+{
+  "event_id": "demo-billing-001",
+  "subject": "Refund request",
+  "message": "Please refund invoice INV-1042. Payment was duplicated."
+}

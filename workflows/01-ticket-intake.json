@@ -1,0 +1,192 @@
+{
+  "name": "ResolveFlow | Ticket Intake & Routing",
+  "nodes": [
+    {
+      "id": "f1fc34f9-d0c5-53bd-962e-a05d280a4f4b",
+      "name": "Ticket intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resolveflow/intake",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "1c3973de-461b-5ace-8a0f-9f703e46698f"
+    },
+    {
+      "id": "80d5b12c-1342-5ffe-b92b-80d96cf2ed92",
+      "name": "Prepare ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/tickets/prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "2f90f504-853d-5e86-bb7b-2f1a23a1df52",
+      "name": "Human review required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "review",
+              "leftValue": "={{ $json.needs_review }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5f18d463-509e-5a63-81ce-f285fd631895",
+      "name": "Review queue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({json: {...item.json, route: 'human_review'}}));"
+      }
+    },
+    {
+      "id": "97940816-ab9c-53a3-b748-ed2f35b9a0e8",
+      "name": "Prepared outbox",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        120
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({json: {...item.json, route: item.json.status === 'rejected' ? 'rejected' : 'outbox'}}));"
+      }
+    },
+    {
+      "id": "2357eac3-e972-5d20-8a7a-613741103393",
+      "name": "Intake response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Ticket intake": {
+      "main": [
+        [
+          {
+            "node": "Prepare ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare ticket": {
+      "main": [
+        [
+          {
+            "node": "Human review required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human review required": {
+      "main": [
+        [
+          {
+            "node": "Review queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepared outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review queue": {
+      "main": [
+        [
+          {
+            "node": "Intake response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepared outbox": {
+      "main": [
+        [
+          {
+            "node": "Intake response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

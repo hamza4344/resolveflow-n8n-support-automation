@@ -1,0 +1,92 @@
+{
+  "name": "ResolveFlow | Human Review",
+  "nodes": [
+    {
+      "id": "2f3f9564-1386-5014-aba6-5afae9cb3143",
+      "name": "Reviewer action",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resolveflow/review",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "a2f7e1a1-140d-51d9-b8c6-a7ad39004f0b"
+    },
+    {
+      "id": "5ab43bf4-cf4a-53f4-a867-910fcab56a6a",
+      "name": "Apply review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/tickets/review",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "4b352ad1-b115-5876-86bc-e45da6f464d1",
+      "name": "Review response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Reviewer action": {
+      "main": [
+        [
+          {
+            "node": "Apply review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply review": {
+      "main": [
+        [
+          {
+            "node": "Review response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
