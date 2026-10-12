@@ -1,0 +1,40 @@
+# Independently written, informed by n8n's self-hosted AI starter kit.
+services:
+  n8n:
+    image: ${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:stable}
+    restart: unless-stopped
+    ports: ["127.0.0.1:5678:5678"]
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Run scripts/setup.py first}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_SECURE_COOKIE: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+    depends_on:
+      api: {condition: service_healthy}
+  api:
+    build: {context: ., dockerfile: service/Dockerfile}
+    restart: unless-stopped
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      API_TOKEN: ${API_TOKEN:?Run scripts/setup.py first}
+      REVIEWER_TOKEN: ${REVIEWER_TOKEN:?Run scripts/setup.py first}
+      AI_MODE: ${AI_MODE:-demo}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+    volumes: ["ticket_data:/data"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: ["ai"]
+    restart: unless-stopped
+    volumes: ["ollama_data:/root/.ollama"]
+volumes:
+  n8n_data:
+  ticket_data:
+  ollama_data:
